@@ -1,0 +1,40 @@
+# .gitlab-ci.yml
+#
+# Pipeline em DUAS etapas:
+#   1. "gerar"    -> lê inventory.yaml e monta a matriz de sites separada em Pilotos e Lotes.
+#   2. "executar" -> dispara um child pipeline com essas etapas (stages) de forma sequencial.
+#
+# ⚠️ IMPORTANTE: CMK_PASSWORD deve ser cadastrada em
+# Settings > CI/CD > Variables (Protected + Masked), NUNCA hardcoded aqui.
+
+stages:
+  - gerar
+  - executar
+
+variables:
+  # Configurações do Orquestrador de Deploy
+  NOVA_VERSAO: "2.5.0-latest"  # Tag da imagem alvo para a atualização
+  TAMANHO_LOTE: "10"           # Quantidade máxima de clientes atualizados simultaneamente por lote
+  PILOTOS: "abc,xyz"           # Siglas dos clientes piloto (separados por vírgula). Se vazio, usa o 1º da lista.
+
+gerar_pipeline:
+  stage: gerar
+  script:
+    - python3 -m pip install pyyaml --quiet --break-system-packages
+    # O script lerá automaticamente as variáveis globais PILOTOS e TAMANHO_LOTE
+    - python3 scripts/gerar_pipeline.py
+  artifacts:
+    paths:
+      - generated-pipeline.yml
+    expire_in: 1 hour
+
+executar_deploy:
+  stage: executar
+  variables:
+    # Garante que a versão flua para dentro do child pipeline
+    NOVA_VERSAO: $NOVA_VERSAO
+  trigger:
+    include:
+      - artifact: generated-pipeline.yml
+        job: gerar_pipeline
+    strategy: depend

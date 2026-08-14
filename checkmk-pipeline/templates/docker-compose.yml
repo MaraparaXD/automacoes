@@ -1,0 +1,20 @@
+services:
+  checkmk:
+    image: checkmk/check-mk-community:${IMAGEM_TAG:-2.5.0-latest}
+    container_name: ${SITE_SIGLA}
+    environment:
+      CMK_SITE_ID: ${SITE_SIGLA}
+      CMK_PASSWORD: ${CMK_PASSWORD}
+    tmpfs:
+      - /opt/omd/sites/${SITE_SIGLA}/tmp:uid=1000,gid=1000
+    volumes:
+      # Caminho RELATIVO: como este docker-compose.yml vive dentro de
+      # /opt/checkmk-container/<site>/, "./dados" já é isolado por site
+      # automaticamente -- sem precisar interpolar ${SITE_SIGLA} aqui.
+      - ./dados:/omd/sites
+    ports:
+      # Portas FIXAS e padronizadas em todos os sites -- cada cliente
+      # roda em host próprio, então não há conflito entre sites.
+      - "80:5000"     # interface web
+      - "6556:8000"   # agente
+    restart: unless-stopped

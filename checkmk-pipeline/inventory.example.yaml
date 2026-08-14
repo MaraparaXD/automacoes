@@ -1,0 +1,28 @@
+# inventory.example.yaml
+#
+# Copie para "inventory.yaml" e ajuste para o seu ambiente.
+# É a "fonte da verdade" lida pelo orchestrator.py e pelo gerar_pipeline.py —
+# tanto pode ser mantida manualmente quanto gerada automaticamente pelos
+# scripts scripts/sync_from_awx.py ou scripts/sync_from_checkmk_master.py.
+
+sites:
+  - sigla: abc
+    cliente: "Cliente ABC"
+    porta_web: 80
+    porta_agent: 6556
+    imagem_tag_atual: "2.5.0-latest"
+    diretorio_compose: "/opt/checkmk-container/abc"
+
+  - sigla: xyz
+    cliente: "Cliente XYZ"
+    porta_web: 80
+    porta_agent: 6556
+    imagem_tag_atual: "2.5.0-latest"
+    diretorio_compose: "/opt/checkmk-container/xyz"
+
+  - sigla: def
+    cliente: "Cliente DEF"
+    porta_web: 80
+    porta_agent: 6556
+    imagem_tag_atual: "2.4.0p12"
+    diretorio_compose: "/opt/checkmk-container/def"

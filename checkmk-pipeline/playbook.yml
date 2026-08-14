@@ -1,0 +1,54 @@
+---
+# playbook.yml
+#
+# Wrapper Ansible para o AWX disparar o pipeline Python (deploy_host.py).
+# Este arquivo faz a "cola" entre os Credentials do AWX e o motor em Python,
+# garantindo que senhas de CMK e LDAP nunca fiquem gravadas no código.
+
+- name: Deploy/atualização de site CheckMK via pipeline Python
+  hosts: all              # O AWX injeta o host real dinamicamente via inventário
+  gather_facts: true      # Necessário para capturar {{ ansible_default_ipv4.address }}
+
+  vars:
+    # Variáveis comuns preenchidas via "Extra Variables" no Job Template do AWX
+    site_sigla: "{{ site_sigla }}"
+    cliente_nome: "{{ cliente_nome | default('desconhecido') }}"
+    nova_versao: "{{ nova_versao }}"
+    diretorio_projeto: "{{ diretorio_projeto | default('/opt/checkmk-pipeline-src') }}"
+
+  tasks:
+    - name: Garantir dependências Python instaladas
+      ansible.builtin.pip:
+        requirements: "{{ diretorio_projeto }}/requirements.txt"
+        extra_args: "--break-system-packages"
+      become: true
+
+    - name: Executar orquestrador do site (Host Bootstrap + Compose + LDAP)
+      ansible.builtin.command: >
+        python3 -m checkmk_pipeline.deploy_host
+        --ip {{ ansible_default_ipv4.address }}
+      args:
+        chdir: "{{ diretorio_projeto }}"
+      environment:
+        # Contexto do Site
+        SITE_SIGLA: "{{ site_sigla }}"
+        CLIENTE_NOME: "{{ cliente_nome }}"
+        NOVA_VERSAO: "{{ nova_versao }}"
+        
+        # --- CREDENCIAIS SEGURAS INJETADAS PELO AWX ---
+        # No AWX, você criará "Custom Credentials" para estas variáveis
+        CMK_PASSWORD: "{{ cmk_password }}"
+        
+        # Variáveis mapeadas para o novo módulo ldap_config.py
+        LDAP_BIND_PASSWORD: "{{ ldap_bind_password | default('') }}"
+        LDAP_SERVER: "{{ ldap_server | default('ad01.suaempresa.cloud') }}"
+        LDAP_BASE_DN: "{{ ldap_base_dn | default('DC=suaempresa,DC=cloud') }}"
+        LDAP_BIND_DN: "{{ ldap_bind_dn | default('CN=svc_checkmk,OU=Services,DC=suaempresa,DC=cloud') }}"
+      
+      # Necessário para instalar agentes com yum/apt e configurar docker
+      become: true    
+      register: resultado_pipeline
+
+    - name: Exibir log de execução do pipeline Python
+      ansible.builtin.debug:
+        var: resultado_pipeline.stdout_lines
