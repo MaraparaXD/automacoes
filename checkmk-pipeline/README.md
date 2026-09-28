@@ -114,36 +114,4 @@ O `.gitlab-ci.yml` já está pronto para uso — só falta:
 3. Garantir que o `gitlab-runner` tem permissão de root (ou sudo
    configurado) para instalar o agente e mexer em `/opt/checkmk-container`
 
-## Integração com AWX
 
-O `playbook.yml` é um wrapper fino — não reimplementa lógica, só resolve
-host/credenciais via AWX e chama `deploy_host.py`. Ver comentários no
-próprio arquivo para detalhes de `become: true` e variáveis esperadas.
-
----
-
-## ⚠️ Assunções que ainda precisam de validação
-
-1. **Motor de execução**: confirmado com o time responsável — é **Docker Compose**,
-   um projeto isolado por site (`docker compose -p <sigla>`). ✅ Resolvido.
-2. **Estrutura de diretório**: confirmado — `/opt/checkmk-container/<sigla>/`
-   com `docker-compose.yml` + `dados/` juntos. ✅ Resolvido.
-3. **Portas**: confirmado — web fixa em `80`, agente fixo em `6556`,
-   já que cada site tem host próprio. ✅ Resolvido.
-4. **Backup**: usa `docker compose exec omd backup`. Confirmar se a empresa
-   já tem outra estratégia (snapshot de disco, backup do host) para não
-   duplicar.
-5. **Template visual do ambiente corporativo** (logo, CSS): fora de escopo por decisão
-   explícita (Etapa 8 ignorada).
-6. **AWX vs orchestrator.py**: quem controla paralelismo/lotes — o AWX
-   (chamando `deploy_host.py` várias vezes) ou o `orchestrator.py`
-   (fazendo isso internamente)? Ver decisão pendente sobre a
-   integração AWX/Ansible.
-7. **Login via LDAP/AD**: pendente — falta endereço/porta do servidor
-   LDAP, usuário de bind, base DN e grupos de AD por nível de acesso.
-   Ver `ldap-connection-template.py`.
-8. **Permissões do host**: instalação do agente (Etapa 6) e escrita em
-   `/opt/checkmk-container` exigem root. Confirmar se o `gitlab-runner`
-   já roda como root nesse ambiente ou se precisa de sudoers dedicado
-   (mesmo padrão que resolvemos no lab: `NOPASSWD` restrito a comandos
-   específicos, nunca sudo geral).
